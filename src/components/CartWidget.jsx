@@ -4,7 +4,7 @@ const CartWidget = () => {
     return (
         <div style={styles.cart}>
             <a href="/carrito"><img src={cartIcon} alt="Carrito" style={styles.cartIcon} /></a>
-            <span style={styles.span}>2</span>
+            <span style={styles.span}>0</span>
         </div>
     );
 };
