@@ -1,1 +1,46 @@
-[]
+[
+  {
+    "id": "982e2069255e86268569",
+    "title": "Sprite",
+    "description": "Gaseosa de limón",
+    "code": "134",
+    "price": 2500,
+    "stock": 40,
+    "category": "Gaseosa",
+    "thumbnails": [],
+    "status": true
+  },
+  {
+    "id": "5bdeed89e829b419d36d",
+    "title": "Coca cola",
+    "description": "Gaseosa 2Lt",
+    "code": "4321",
+    "price": 3000,
+    "stock": 55,
+    "category": "Gaseosa",
+    "thumbnails": [],
+    "status": true
+  },
+  {
+    "id": "b8d815d403c07b9d2eb5",
+    "title": "Fanta",
+    "description": "Gaseosa 1,5Lt",
+    "code": "3124",
+    "price": 2400,
+    "stock": 35,
+    "category": "Gaseosa",
+    "thumbnails": [],
+    "status": true
+  },
+  {
+    "id": "4b61e3e5c4b56f483ce8",
+    "title": "Pepsi",
+    "description": "Gaseosa 2Lt",
+    "code": "4314",
+    "price": 2500,
+    "stock": 40,
+    "category": "Gaseosa",
+    "thumbnails": [],
+    "status": true
+  }
+]
