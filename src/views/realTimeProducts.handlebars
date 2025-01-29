@@ -117,13 +117,11 @@
     </div>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
     const productForm = document.getElementById("product-form");
     const productList = document.getElementById("product-list");
 
-    //Función para mostrar productos
     function renderProducts(products) {
       productList.innerHTML = "";
       products.forEach(product => {
@@ -139,7 +137,7 @@
         productList.appendChild(productCard);
       });
 
-      //Eliminar producto
+      // Eliminar producto
       const deleteButtons = document.querySelectorAll(".delete-btn");
       deleteButtons.forEach(button => {
         button.addEventListener("click", function() {
@@ -149,7 +147,6 @@
       });
     }
 
-    //Enviar formulario
     productForm.addEventListener("submit", function(event) {
       event.preventDefault();
 
@@ -166,7 +163,7 @@
       socket.emit("addProduct", newProduct);
     });
 
-    socket.emit("getProducts");
+    socket.emit("updateProducts");
 
     socket.on("updateProducts", function(products) {
       renderProducts(products);

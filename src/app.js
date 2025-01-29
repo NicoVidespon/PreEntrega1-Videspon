@@ -2,42 +2,119 @@ import express from "express";
 import { Server as SocketIOServer } from "socket.io";
 import { createServer } from "http";
 import { engine as exphbs } from "express-handlebars";
-import fs from "fs/promises";
 import path from "path";
+import session from "express-session";
+import route from "./routes/user.router.js";
 import productsRouter from "./routes/products.router.js";
 import cartsRouter from "./routes/carts.router.js";
 import ProductManager from "./managers/ProductManager.js";
 import CartManager from "./managers/CartManager.js";
+import connectionMongo from "./connection/mongo.js";
 
 const app = express();
+connectionMongo(); // Conexión a la base de datos MongoDB
 const PORT = 8080;
 const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer);
 
-app.engine("handlebars", exphbs());
+// Configuración de Handlebars
+app.engine(
+  "handlebars",
+  exphbs({
+    runtimeOptions: {
+      allowProtoPropertiesByDefault: true,
+      allowProtoMethodsByDefault: true,
+    },
+  })
+);
 app.set("view engine", "handlebars");
 app.set("views", path.resolve("src/views"));
 
+// Middleware para manejar sesiones
+app.use(
+  session({
+    secret: "1234", 
+    resave: false,
+    saveUninitialized: true,
+  })
+);
+
+// Middleware
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.resolve("src/public")));
 
+// Instancias de managers
 const productManager = new ProductManager();
 const cartManager = new CartManager();
 
-//Rutas
+// Rutas API
 app.use("/api/products", productsRouter);
 app.use("/api/carts", cartsRouter);
+app.use("/api/users", route);
 
-//Ruta para "home"
+// Ruta para "home"
 app.get("/", async (req, res) => {
-  const products = await productManager.getProducts();
-  res.render("home", { products });
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const products = await productManager.getPaginatedProducts(page, limit);
+
+    let cartId = req.session.cartId;
+
+    if (!cartId) {
+      const newCart = await cartManager.createCart();
+      cartId = newCart._id;
+
+      req.session.cartId = cartId;
+    }
+
+    res.render("home", {
+      products: products.products,
+      prevPage: products.prevPage,
+      nextPage: products.nextPage,
+      cartId, 
+    });
+  } catch (error) {
+    console.error("Error al cargar la página home:", error);
+    res.status(500).send("Error al cargar la página.");
+  }
 });
 
-//Ruta para "realTimeProducts"
+// Ruta para "realTimeProducts"
 app.get("/realtimeproducts", async (req, res) => {
-  const products = await productManager.getProducts();
-  res.render("realTimeProducts", { products });
+  try {
+    const products = await productManager.getProducts({});
+    res.render("realTimeProducts", { products });
+  } catch (error) {
+    console.error("Error al cargar la página realtimeproducts:", error);
+    res.status(500).send("Error al cargar la página.");
+  }
+});
+
+// Ruta para "cart"
+app.get('/cart/:id', async (req, res) => {
+  try {
+    const cartId = req.params.id;
+    const cart = await cartManager.getCartById(cartId);
+    res.render('cart', { cart }); 
+  } catch (error) {
+    res.status(500).send('Error al cargar el carrito: ' + error.message);
+  }
+});
+
+// Ruta para "productDetail"
+app.get("/products/:pid", async (req, res) => {
+  try {
+    const { pid } = req.params;
+    const product = await productManager.getProductById(pid);
+
+    if (!product) return res.status(404).send("Producto no encontrado");
+
+    res.render("productDetail", { product });
+  } catch (error) {
+    console.error("Error al cargar la página del producto:", error);
+    res.status(500).send("Error al cargar el producto.");
+  }
 });
 
 // WebSockets
@@ -45,14 +122,18 @@ io.on("connection", (socket) => {
   console.log("Cliente conectado");
 
   socket.emit("updateProducts", async () => {
-    const products = await productManager.getProducts();
-    return products;
+    try {
+      const products = await productManager.getProducts({});
+      socket.emit("updateProducts", products);
+    } catch (error) {
+      console.error("Error al obtener productos para el cliente:", error);
+    }
   });
 
   socket.on("addProduct", async (newProduct) => {
     try {
-      const createdProduct = await productManager.createProduct(newProduct);
-      const products = await productManager.getProducts();
+      await productManager.createProduct(newProduct);
+      const products = await productManager.getProducts({});
       io.emit("updateProducts", products);
     } catch (error) {
       console.error("Error al agregar el producto:", error);
@@ -68,8 +149,21 @@ io.on("connection", (socket) => {
       console.error("Error al eliminar el producto:", error);
     }
   });
+
+  socket.on("addProductToCart", async (data) => {
+    try {
+      const { productId, cartId } = data;  
+      const cart = await cartManager.addProductToCart(cartId, productId, 1); 
+      socket.emit("cartUpdated", cart);
+    } catch (error) {
+      console.error("Error al agregar producto al carrito:", error);
+    }
+  });
+
+  socket.emit("addProductToCart", { productId: "someProductId", cartId: "someCartId" });
 });
 
+// Iniciar el servidor
 httpServer.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });

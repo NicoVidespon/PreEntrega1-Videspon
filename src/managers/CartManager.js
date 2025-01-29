@@ -1,76 +1,78 @@
-import { promises as fs } from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const CARTS_FILE = path.join(__dirname, "../data/carts.json");
+import { CartModel } from "../models/CartModel.js";
+import ProductModel from "../models/ProductModel.js";
 
 class CartManager {
-  async getCarts() {
-    try {
-      const data = await fs.readFile(CARTS_FILE, "utf-8");
-      return JSON.parse(data);
-    } catch (error) {
-      if (error.code === "ENOENT") return []; 
-      throw error;
-    }
-  }
-
-  async saveCarts(carts) {
-    try {
-      await fs.writeFile(CARTS_FILE, JSON.stringify(carts, null, 2));
-    } catch (error) {
-      throw new Error(`Error al guardar los carritos: ${error.message}`);
-    }
-  }
-
+  // Crea un carrito vacío
   async createCart() {
-    const carts = await this.getCarts();
-
-    const newCart = {
-      id: crypto.randomBytes(10).toString("hex"),
-      products: [],
-    };
-
-    carts.push(newCart);
-    await this.saveCarts(carts);
+    const newCart = new CartModel();
+    await newCart.save();
     return newCart;
   }
 
-  async getCartById(cid) {
-    const carts = await this.getCarts();
-    return carts.find((c) => c.id === cid);
+  // Obtiene todos los carritos con los productos 
+  async getAllCarts() {
+    return await CartModel.find().populate("productos.producto").exec();
   }
 
-  async addProductToCart(cid, pid) {
-    const carts = await this.getCarts();
-    const cart = carts.find((c) => c.id === cid);
+  // Obtiene un carrito por su ID con los productos 
+  async getCartById(cartId) {
+    return await CartModel.findById(cartId).populate("productos.producto").exec();
+  }
+  // Agregar un producto al carrito
+  async addProductToCart(cartId, productId, quantity) {
+    const cart = await this._getCartById(cartId);
     if (!cart) throw new Error("Carrito no encontrado");
 
-    const productExists = cart.products.find((p) => p.id === pid);
-    if (productExists) {
-      productExists.quantity++;
+    const productIndex = cart.productos.findIndex((item) => item.producto.toString() === productId);
+    if (productIndex > -1) {
+      cart.productos[productIndex].quantity += quantity;
     } else {
-      cart.products.push({ id: pid, quantity: 1 });
+      cart.productos.push({ producto: productId, quantity });
     }
 
-    await this.saveCarts(carts);
+    cart.monto = await this.calculateTotal(cart);
+    await cart.save();
     return cart;
   }
 
-  async deleteProductFromCart(cid, pid) {
-    const carts = await this.getCarts();
-    const cart = carts.find((c) => c.id === cid);
+
+  // Elimina un producto del carrito
+  async deleteProductFromCart(cartId, productId) {
+    const cart = await this._getCartById(cartId);
     if (!cart) throw new Error("Carrito no encontrado");
 
-    const productIndex = cart.products.findIndex((p) => p.id === pid);
-    if (productIndex === -1) throw new Error("Producto no encontrado");
-
-    cart.products.splice(productIndex, 1);
-    await this.saveCarts(carts);
+    cart.productos = cart.productos.filter((item) => item.producto.toString() !== productId);
+    cart.monto = await this.calculateTotal(cart);
+    await cart.save();
     return cart;
+  }
+
+  // Vacía el carrito
+  async clearCart(cartId) {
+    const cart = await this._getCartById(cartId);
+    if (!cart) throw new Error("Carrito no encontrado");
+
+    cart.productos = [];
+    cart.monto = 0;
+    await cart.save();
+    return cart;
+  }
+
+  // Calcula el total del carrito
+  async calculateTotal(cart) {
+    const productIds = cart.productos.map(item => item.producto);
+    const products = await ProductModel.find({ '_id': { $in: productIds } });
+
+    let total = 0;
+    for (let item of cart.productos) {
+      const product = products.find(p => p._id.toString() === item.producto.toString());
+      total += product.price * item.quantity;
+    }
+
+    return total;
+  }
+  async _getCartById(cartId) {
+    return await CartModel.findById(cartId).populate("productos.producto").exec();
   }
 }
 

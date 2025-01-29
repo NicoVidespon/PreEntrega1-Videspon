@@ -1,83 +1,93 @@
-import { promises as fs } from "fs";
-import path from "path";
-import crypto from "crypto";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const PRODUCTS_FILE = path.join(__dirname, "../data/products.json");
+import Product from "../models/ProductModel.js"; // Ajusta la ruta si es necesario
+import mongoose from 'mongoose';
 
 class ProductManager {
-  async getProducts() {
+  // Obtener productos con paginación
+  async getPaginatedProducts(page, limit) {
     try {
-      const data = await fs.readFile(PRODUCTS_FILE, "utf-8");
-      return JSON.parse(data);
+      const skip = (page - 1) * limit;
+      const products = await Product.find().skip(skip).limit(limit).exec();
+      
+      const totalProducts = await Product.countDocuments();
+      const totalPages = Math.ceil(totalProducts / limit);
+      
+      return {
+        products,
+        prevPage: page > 1 ? page - 1 : null,
+        nextPage: page < totalPages ? page + 1 : null
+      };
     } catch (error) {
-      if (error.code === "ENOENT") return []; 
-      throw error;
+      throw new Error(`Error al obtener productos con paginación: ${error.message}`);
     }
   }
 
-  async saveProducts(products) {
+  // Obtener productos por sus IDs
+  async getProductsByIds(ids) {
     try {
-      await fs.writeFile(PRODUCTS_FILE, JSON.stringify(products, null, 2));
+      return await Product.find({ '_id': { $in: ids } });
     } catch (error) {
-      throw new Error(`Error al guardar los productos: ${error.message}`);
+      throw new Error(`Error al obtener productos por ID: ${error.message}`);
     }
   }
 
+  // Contar la cantidad de productos con filtros opcionales
+  async countProducts(filters = {}) {
+    try {
+      return await Product.countDocuments(filters);
+    } catch (error) {
+      throw new Error(`Error al contar productos: ${error.message}`);
+    }
+  }
+
+  // Obtener un producto por su ID
+  async getProductById(productId) {
+    try {
+      const product = await Product.findById(productId);
+      if (!product) throw new Error("Producto no encontrado");
+      return product;
+    } catch (error) {
+      throw new Error(`Error al obtener producto por ID: ${error.message}`);
+    }
+  }
+
+  // Crear un nuevo producto
   async createProduct(productData) {
-    const { title, description, code, price, stock, category, thumbnails } = productData;
-
-    const products = await this.getProducts();
-
-    const newProduct = {
-      id: crypto.randomBytes(10).toString("hex"),
-      title,
-      description,
-      code,
-      price: parseFloat(price),
-      stock: parseInt(stock),
-      category,
-      thumbnails: thumbnails || [],
-      status: true,
-    };
-
-    products.push(newProduct);
-    await this.saveProducts(products);
-    return newProduct;
+    try {
+      if (!productData.title || !productData.price || !productData.category) {
+        throw new Error("Faltan campos obligatorios");
+      }
+      const newProduct = new Product(productData);
+      await newProduct.save();
+      return newProduct;
+    } catch (error) {
+      throw new Error(`Error al crear el producto: ${error.message}`);
+    }
   }
 
-  async getProductById(pid) {
-    const products = await this.getProducts();
-    return products.find((p) => p.id === pid);
+  // Actualizar un producto
+  async updateProduct(productId, updatedData) {
+    try {
+      const updatedProduct = await Product.findByIdAndUpdate(
+        productId,
+        updatedData,
+        { new: true }
+      );
+      if (!updatedProduct) throw new Error("Producto no encontrado");
+      return updatedProduct;
+    } catch (error) {
+      throw new Error(`Error al actualizar el producto: ${error.message}`);
+    }
   }
 
-  async updateProduct(pid, updates) {
-    const products = await this.getProducts();
-    const productIndex = products.findIndex((p) => p.id === pid);
-    if (productIndex === -1) throw new Error("Producto no encontrado");
-
-    const product = products[productIndex];
-    const updatedProduct = {
-      ...product,
-      ...updates,
-      id: product.id,
-    };
-
-    products[productIndex] = updatedProduct;
-    await this.saveProducts(products);
-    return updatedProduct;
-  }
-
-  async deleteProduct(pid) {
-    const products = await this.getProducts();
-    const filteredProducts = products.filter((p) => p.id !== pid);
-    if (filteredProducts.length === products.length) throw new Error("Producto no encontrado");
-
-    await this.saveProducts(filteredProducts);
-    return true;
+  // Eliminar un producto
+  async deleteProduct(productId) {
+    try {
+      const deletedProduct = await Product.findByIdAndDelete(productId);
+      if (!deletedProduct) throw new Error("Producto no encontrado");
+      return deletedProduct;  // Retorna el producto eliminado
+    } catch (error) {
+      throw new Error(`Error al eliminar el producto: ${error.message}`);
+    }
   }
 }
 

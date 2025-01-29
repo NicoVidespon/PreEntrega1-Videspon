@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrito</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-image: linear-gradient(to bottom, #ffcc00, #ff8800);
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1000px;
+      padding: 40px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    h1 {
+      color: #333;
+      font-size: 36px;
+      margin-bottom: 30px;
+    }
+
+    .cart-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .cart-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background-color: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .cart-item button {
+      background-color: #ff4d4d;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .cart-item button:hover {
+      background-color: #ff1a1a;
+    }
+
+    .btn-back {
+      display: inline-block;
+      margin-top: 30px;
+      padding: 12px 30px;
+      background-color: #ff8800;
+      color: white;
+      text-decoration: none;
+      border-radius: 25px;
+      font-size: 18px;
+      text-align: center;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .btn-back:hover {
+      background-color: #e67e00;
+      transform: scale(1.05);
+    }
+
+    .btn-back:active {
+      background-color: #cc6600;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Carrito de compras</h1>
+
+    <div class="cart-list">
+      {{#each cart.productos}}
+        <div class="cart-item">
+          <h3>{{this.producto.title}}</h3>
+          <p>Precio: ${{this.producto.price}}</p>
+          <p>Cantidad: {{this.cantidad}}</p>
+          <button onclick="removeFromCart('{{this.producto._id}}')">Eliminar</button>
+        </div>
+      {{else}}
+        <p>No hay productos en el carrito.</p>
+      {{/each}}
+    </div>
+
+    <a href="/" class="btn-back">Volver a la tienda</a>
+  </div>
+
+  <script>
+    function removeFromCart(productId) {
+      fetch(`/remove-from-cart/${productId}`, {
+        method: 'POST',  
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('Producto eliminado del carrito');
+          // Eliminar el producto del DOM sin recargar la página
+          document.querySelector(`[onclick="removeFromCart('${productId}')"]`).closest('.cart-item').remove();
+        } else {
+          alert('No se pudo eliminar el producto');
+        }
+      })
+      .catch(error => {
+        console.error('Error al eliminar del carrito:', error);
+      });
+    }
+  </script>
+
+</body>
+</html>
