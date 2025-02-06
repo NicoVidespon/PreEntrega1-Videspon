@@ -20,15 +20,5 @@ const connectionMongo = async () => {
         process.exit(1);  
     }
 };
-process.on('SIGINT', async () => {
-    try {
-        await mongoose.connection.close();
-        console.log('Conexión a MongoDB cerrada');
-        process.exit(0);  
-    } catch (e) {
-        console.error('Error al cerrar la conexión:', e.message);
-        process.exit(1);
-    }
-});
 
 export default connectionMongo;

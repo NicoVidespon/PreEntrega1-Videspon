@@ -4,7 +4,7 @@ import { createServer } from "http";
 import { engine as exphbs } from "express-handlebars";
 import path from "path";
 import session from "express-session";
-import route from "./routes/user.router.js";
+import methodOverride from "method-override";
 import productsRouter from "./routes/products.router.js";
 import cartsRouter from "./routes/carts.router.js";
 import ProductManager from "./managers/ProductManager.js";
@@ -12,7 +12,7 @@ import CartManager from "./managers/CartManager.js";
 import connectionMongo from "./connection/mongo.js";
 
 const app = express();
-connectionMongo(); // Conexión a la base de datos MongoDB
+connectionMongo(); 
 const PORT = 8080;
 const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer);
@@ -42,6 +42,7 @@ app.use(
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(methodOverride("_method"));
 app.use(express.static(path.resolve("src/public")));
 
 // Instancias de managers
@@ -51,28 +52,27 @@ const cartManager = new CartManager();
 // Rutas API
 app.use("/api/products", productsRouter);
 app.use("/api/carts", cartsRouter);
-app.use("/api/users", route);
 
 // Ruta para "home"
 app.get("/", async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const products = await productManager.getPaginatedProducts(page, limit);
+    const { page = 1, limit = 10 } = req.query; 
+    const products = await productManager.getPaginatedProducts(parseInt(page), parseInt(limit));
 
     let cartId = req.session.cartId;
-
     if (!cartId) {
       const newCart = await cartManager.createCart();
       cartId = newCart._id;
-
       req.session.cartId = cartId;
     }
 
     res.render("home", {
-      products: products.products,
-      prevPage: products.prevPage,
-      nextPage: products.nextPage,
-      cartId, 
+      products: products.products,  
+      currentPage: products.currentPage,
+      totalPages: products.totalPages,
+      prevPage: products.hasPrevPage ? products.prevPage : null,
+      nextPage: products.hasNextPage ? products.nextPage : null,
+      cartId  
     });
   } catch (error) {
     console.error("Error al cargar la página home:", error);
@@ -80,16 +80,6 @@ app.get("/", async (req, res) => {
   }
 });
 
-// Ruta para "realTimeProducts"
-app.get("/realtimeproducts", async (req, res) => {
-  try {
-    const products = await productManager.getProducts({});
-    res.render("realTimeProducts", { products });
-  } catch (error) {
-    console.error("Error al cargar la página realtimeproducts:", error);
-    res.status(500).send("Error al cargar la página.");
-  }
-});
 
 // Ruta para "cart"
 app.get('/cart/:id', async (req, res) => {
@@ -102,15 +92,21 @@ app.get('/cart/:id', async (req, res) => {
   }
 });
 
-// Ruta para "productDetail"
+// Ruta para "Detalle de producto"
 app.get("/products/:pid", async (req, res) => {
   try {
     const { pid } = req.params;
     const product = await productManager.getProductById(pid);
-
     if (!product) return res.status(404).send("Producto no encontrado");
 
-    res.render("productDetail", { product });
+    let cartId = req.session.cartId;
+    if (!cartId) {
+      const newCart = await cartManager.createCart();
+      cartId = newCart._id;
+      req.session.cartId = cartId;
+    }
+    
+    res.render("productDetail", { product, cartId });
   } catch (error) {
     console.error("Error al cargar la página del producto:", error);
     res.status(500).send("Error al cargar el producto.");
@@ -123,7 +119,7 @@ io.on("connection", (socket) => {
 
   socket.emit("updateProducts", async () => {
     try {
-      const products = await productManager.getProducts({});
+      const products = await productManager.getProducts();
       socket.emit("updateProducts", products);
     } catch (error) {
       console.error("Error al obtener productos para el cliente:", error);
@@ -133,7 +129,7 @@ io.on("connection", (socket) => {
   socket.on("addProduct", async (newProduct) => {
     try {
       await productManager.createProduct(newProduct);
-      const products = await productManager.getProducts({});
+      const products = await productManager.getProducts();
       io.emit("updateProducts", products);
     } catch (error) {
       console.error("Error al agregar el producto:", error);
@@ -159,8 +155,6 @@ io.on("connection", (socket) => {
       console.error("Error al agregar producto al carrito:", error);
     }
   });
-
-  socket.emit("addProductToCart", { productId: "someProductId", cartId: "someCartId" });
 });
 
 // Iniciar el servidor
