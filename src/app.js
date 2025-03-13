@@ -10,6 +10,10 @@ import cartsRouter from "./routes/carts.router.js";
 import ProductManager from "./managers/ProductManager.js";
 import CartManager from "./managers/CartManager.js";
 import connectionMongo from "./connection/mongo.js";
+import cookieParser from "cookie-parser";
+import FileStore from "session-file-store"; 
+import passport from "./config/passport.js";
+import sessionsRouter from "./routes/sessions.router.js";
 
 const app = express();
 connectionMongo(); 
@@ -31,25 +35,34 @@ app.set("view engine", "handlebars");
 app.set("views", path.resolve("src/views"));
 
 // Middleware para manejar sesiones
+const FileStoreSession = FileStore(session); 
 app.use(
   session({
+    store: new FileStoreSession({
+      path: './sessions',
+      ttl: 1000,
+      retries: 0
+    }),
     secret: "1234", 
-    resave: false,
+    resave: true,
     saveUninitialized: true,
   })
 );
 
 // Middleware
+app.use(passport.initialize()); 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
 app.use(express.static(path.resolve("src/public")));
+app.use(cookieParser());
 
 // Instancias de managers
 const productManager = new ProductManager();
 const cartManager = new CartManager();
 
 // Rutas API
+app.use("/api/sessions", sessionsRouter); 
 app.use("/api/products", productsRouter);
 app.use("/api/carts", cartsRouter);
 
@@ -79,7 +92,6 @@ app.get("/", async (req, res) => {
     res.status(500).send("Error al cargar la página.");
   }
 });
-
 
 // Ruta para "cart"
 app.get('/cart/:id', async (req, res) => {
@@ -114,17 +126,15 @@ app.get("/products/:pid", async (req, res) => {
 });
 
 // WebSockets
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   console.log("Cliente conectado");
 
-  socket.emit("updateProducts", async () => {
-    try {
-      const products = await productManager.getProducts();
-      socket.emit("updateProducts", products);
-    } catch (error) {
-      console.error("Error al obtener productos para el cliente:", error);
-    }
-  });
+  try {
+    const products = await productManager.getProducts();
+    socket.emit("updateProducts", products);
+  } catch (error) {
+    console.error("Error al obtener productos para el cliente:", error);
+  }
 
   socket.on("addProduct", async (newProduct) => {
     try {
