@@ -11,5 +11,5 @@ const productSchema = new mongoose.Schema({
   status: { type: Boolean, default: true }
 });
 
-const Product = mongoose.model("Product", productSchema);
-export default Product;
+const productModel = mongoose.model("Product", productSchema);
+export default productModel;

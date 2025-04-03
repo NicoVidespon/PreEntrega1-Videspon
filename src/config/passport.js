@@ -1,11 +1,11 @@
 import passport from "passport";
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
-import UserModel from "../models/UserModel.js";
+import UserModel from "../daos/MONGO/models/UserModel.js";
 import dotenv from "dotenv";
 
 dotenv.config(); 
 
-const JWT_SECRET = process.env.JWT_SECRET || "secretoSuperSeguro";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const jwtOptions = {
   jwtFromRequest: ExtractJwt.fromExtractors([

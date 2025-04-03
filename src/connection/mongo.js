@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const url = process.env.MONGO_URI;
-const dbName = process.env.MONGO_DB_NAME || 'Users'; 
+const dbName = process.env.MONGO_DB_NAME; 
 
 if (!url) {
     console.error('MONGO_URI no está definida en las variables de entorno');

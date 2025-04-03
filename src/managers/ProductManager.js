@@ -1,30 +1,42 @@
-import Product from "../models/ProductModel.js";
+import Product from "../daos/MONGO/models/ProductModel.js";
 
 class ProductManager {
+  // Obtener todos los productos
   async getProducts() {
     try {
-      const products = await Product.find(); 
+      const products = await Product.find();
       return products;
     } catch (error) {
       throw new Error(`Error al obtener los productos: ${error.message}`);
     }
   }
 
+  // Obtener productos con paginación
   async getPaginatedProducts(page = 1, limit = 10) {
     try {
-      const products = await Product.find()  
+     
+      page = parseInt(page);
+      limit = parseInt(limit);
+
+      const products = await Product.find()
         .skip((page - 1) * limit)
         .limit(limit);
 
-      const total = await Product.countDocuments(); 
 
-      const prevPage = page > 1 ? page - 1 : null;
-      const nextPage = (page * limit) < total ? page + 1 : null;
+      const total = await Product.countDocuments();
+
+
+      const totalPages = Math.ceil(total / limit);
+      const currentPage = page;
 
       return {
         products,
-        prevPage,
-        nextPage
+        currentPage,
+        totalPages,
+        hasPrevPage: currentPage > 1,
+        hasNextPage: currentPage < totalPages,
+        prevPage: currentPage > 1 ? currentPage - 1 : null,
+        nextPage: currentPage < totalPages ? currentPage + 1 : null,
       };
     } catch (error) {
       throw new Error("Error al obtener los productos paginados: " + error.message);
