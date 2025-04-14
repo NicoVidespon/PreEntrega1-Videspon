@@ -100,19 +100,24 @@
 <body>
   <div class="container">
     <h1>Lista de Productos</h1>
-    <div class="product-list">
-      {{#each products}}
-        <div class="product-card">
-          <h2>{{this.title}}</h2>
-          <p>Precio: ${{this.price}}</p>
-          <a href="/products/{{this._id}}" class="btn">Ver Detalles</a>
-          <form action="/api/carts/{{../cartId}}/product/{{this._id}}" method="POST" style="margin-top:10px;">
-            <button type="submit" class="btn">Agregar al Carrito</button>
-          </form>
-        </div>
-      {{/each}}
-    </div>
-    
+    {{#if products.length}}
+  <div class="product-list">
+    {{#each products}}
+      <div class="product-card">
+        <h2>{{this.title}}</h2>
+        <p>Precio: ${{this.price}}</p>
+        <a href="/products/{{this._id}}" class="btn">Ver Detalles</a>
+        <form action="/api/carts/{{../cartId}}/product/{{this._id}}" method="POST" style="margin-top:10px;">
+          <button type="submit" class="btn">Agregar al Carrito</button>
+        </form>
+      </div>
+    {{/each}}
+  </div>
+{{else}}
+  <p>No hay productos disponibles.</p>
+{{/if}}
+
+
     <div class="pagination">
       {{#if prevPage}}
         <a href="/?page={{prevPage}}&limit=10">Anterior</a>
@@ -122,7 +127,7 @@
         <a href="/?page={{nextPage}}&limit=10">Siguiente</a>
       {{/if}}
     </div>
-  
+
     <a href="/cart/{{cartId}}" class="go-to-cart">Ir al Carrito</a>
   </div>
 </body>

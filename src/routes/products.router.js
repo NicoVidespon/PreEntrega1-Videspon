@@ -1,22 +1,30 @@
 import { Router } from "express";
-import ProductController from "../controllers/products.controller.js";
+import passport from "passport";
+import { authorization } from "../middlewares/authorization.middleware.js";
+import ProductsController from "../controllers/products.controller.js";
 
 const router = Router();
-const productController = new ProductController();
+const {getProducts, getProduct, createProduct, updateProduct, deleteProduct} = new ProductsController();
 
-// Obtener productos 
-router.get("/", productController.getProducts);
-
-// Obtener producto por ID
-router.get("/:pid", productController.getProduct);
-
-// Crear un nuevo producto
-router.post("/", productController.createProduct);
-
-// Actualizar un producto
-router.put("/:pid", productController.updateProduct);
-
-// Eliminar un producto
-router.delete("/:pid", productController.deleteProduct);
+router.get("/", getProducts);
+router.get("/:pid", getProduct);
+router.post(
+  "/",
+  passport.authenticate("jwt", { session: false }),
+  authorization("admin"),
+  createProduct
+);
+router.put(
+  "/:pid",
+  passport.authenticate("jwt", { session: false }),
+  authorization("admin"),
+  updateProduct
+);
+router.delete(
+  "/:pid",
+  passport.authenticate("jwt", { session: false }),
+  authorization("admin"),
+  deleteProduct
+);
 
 export default router;

@@ -1,28 +1,24 @@
 import passport from "passport";
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
 import UserModel from "../daos/MONGO/models/UserModel.js";
-import dotenv from "dotenv";
-
-dotenv.config(); 
-
-const JWT_SECRET = process.env.JWT_SECRET;
+import { configObject } from "./index.js";
 
 const jwtOptions = {
   jwtFromRequest: ExtractJwt.fromExtractors([
-    (req) => req?.cookies?.token,
+    ExtractJwt.fromAuthHeaderAsBearerToken(),   
+    (req) => req?.cookies?.coderCookieToken,  
   ]),
-  secretOrKey: JWT_SECRET,
+  secretOrKey: configObject.privateKey,
 };
 
 passport.use(
-  "jwt",
-  new JwtStrategy(jwtOptions, async (jwt_payload, done) => {
+  new JwtStrategy(jwtOptions, async (payload, done) => {
     try {
-      const user = await UserModel.findById(jwt_payload.id);
+      const user = await UserModel.findById(payload.id);
       if (!user) return done(null, false);
       return done(null, user);
-    } catch (error) {
-      return done(error, false);
+    } catch (err) {
+      return done(err, false);
     }
   })
 );

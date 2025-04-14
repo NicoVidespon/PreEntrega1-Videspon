@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Carrito de Compras</title>
   <style>
     body {
@@ -130,7 +130,7 @@
               <p>Cantidad: {{this.quantity}}</p>
             </div>
             <form action="/api/carts/{{../cart._id}}/products/{{this.producto._id}}?_method=PUT" method="POST">
-              <input type="number" name="quantity" min="1" value="{{this.quantity}}" required>
+              <input type="number" name="quantity" min="1" value="{{this.quantity}}" required />
               <button type="submit">Actualizar Cantidad</button>
             </form>
             <form action="/api/carts/{{../cart._id}}/product/{{this.producto._id}}?_method=DELETE" method="POST">
@@ -142,11 +142,10 @@
     {{else}}
       <p>No hay productos en el carrito.</p>
     {{/if}}
-      
     <form action="/api/carts/{{cart._id}}?_method=DELETE" method="POST">
       <button type="submit" class="clear-cart">Vaciar Carrito</button>
     </form>
-    
+
     <a href="/" class="btn-back">Volver a la Tienda</a>
   </div>
 </body>

@@ -1,10 +1,10 @@
-import { productService } from "../services/index.js";
+import { productsService } from "../services/index.js";
+
 class ProductController {
   constructor() {
-    this.service = productService;
+    this.service = productsService;
   }
 
-  // Crear producto
   createProduct = async (req, res, next) => {
     try {
       const result = await this.service.createProduct(req.body);
@@ -14,7 +14,6 @@ class ProductController {
     }
   };
 
-  // Obtener productos con filtros, paginación y ordenamiento 
   getProducts = async (req, res, next) => {
     try {
       const { limit = 10, page = 1, sort, query } = req.query;
@@ -52,7 +51,6 @@ class ProductController {
     }
   };
 
-  // Obtener producto por ID
   getProduct = async (req, res, next) => {
     const { pid } = req.params;
     try {
@@ -64,7 +62,6 @@ class ProductController {
     }
   };
 
-  // Actualizar producto 
   updateProduct = async (req, res, next) => {
     try {
       const updatedProduct = await this.service.updateProduct(req.params.pid, req.body);
@@ -74,17 +71,17 @@ class ProductController {
       next(error);
     }
   };
-
-  // Eliminar producto 
   deleteProduct = async (req, res, next) => {
     try {
       const deletedProduct = await this.service.deleteProduct(req.params.pid);
-      if (!deletedProduct) return res.status(404).json({ message: "Producto no encontrado" });
-      res.status(204).send();
+      if (!deletedProduct)
+        return res.status(404).json({ message: "Producto no encontrado" });
+      res.status(200).json({ status: "success", message: "Producto eliminado correctamente", payload: deletedProduct });
     } catch (error) {
       next(error);
     }
   };
+  
 }
 
 export default ProductController;

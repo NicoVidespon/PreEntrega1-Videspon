@@ -1,5 +1,8 @@
 import SessionsDaoMongo from "../daos/MONGO/sessions.dao.js";
-import { createHash, isValidPassword } from "../utils/bcrypt.js";
+import { createHash, isValidPassword } from '../utils/bcrypt.js';
+import { generateToken } from '../utils/authToken.js';
+import UserDTO from "../dtos/users.dto.js";
+
 
 class SessionsController {
     constructor() {
@@ -8,72 +11,83 @@ class SessionsController {
 
     register = async (req, res) => {
         try {
-            const { first_name, last_name, email, password } = req.body;
-            console.log(req.body);
-
-            if (!email || !password) {
-                return res.status(400).send({ status: "error", error: "Email y password son obligatorios" });
+            const { first_name, last_name, email, password, adminCode } = req.body; 
+    
+            if (!email?.trim() || !password?.trim()) {
+                return res.status(400).send({ status: 'error', error: 'Faltan campos obligatorios' });
             }
-
+    
             const userFound = await this.service.getUser(email);
             if (userFound) {
-                return res.status(401).send({ status: "error", error: "El usuario ya existe" });
+                return res.status(401).send({ status: 'error', error: 'El usuario ya existe' });
             }
-
-            const hashedPassword = createHash(password);
-
+    
+            const role = adminCode === process.env.ADMIN_SECRET ? "admin" : "user"; 
+    
             const newUser = {
                 first_name,
                 last_name,
                 email,
-                password: hashedPassword 
+                password: createHash(password),
+                role
             };
-
+    
             const result = await this.service.createUser(newUser);
-            res.send({ status: "success", payload: result });
+    
+            res.send({ status: 'success', payload: result });
         } catch (error) {
-            console.error("🚨 Error en el registro:", error);
-            res.status(500).json({ error: "Error al registrar usuario", details: error.message });
+            console.log(error);
+            res.status(500).send({ status: 'error', error: error.message });
         }
     };
-
+        
     login = async (req, res) => {
         try {
             const { email, password } = req.body;
-            console.log("🔹 Intento de login con email:", email);
 
-            const user = await this.service.getUser(email);
-            if (!user) {
-                console.log("❌ Usuario no encontrado");
-                return res.status(401).json({ error: "Credenciales incorrectas" });
+            if (!email?.trim() || !password?.trim()) {
+                return res.status(400).send({ status: 'error', error: 'Email y password son obligatorios' });
             }
 
-            const isMatch = isValidPassword(password, user.password);
-            console.log("🔍 ¿La contraseña es correcta?", isMatch);
-
-            if (!isMatch) {
-                console.log("❌ Contraseña incorrecta");
-                return res.status(401).json({ error: "Credenciales incorrectas" });
+            const userFound = await this.service.getUser(email);
+            if (!userFound) {
+                return res.status(401).send({ status: 'error', error: 'El usuario no existe' });
             }
 
-            
-            const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1h" });
+            const passwordIsValid = isValidPassword(password, userFound);
+            if (!passwordIsValid) {
+                return res.status(401).send({ status: 'error', error: 'Email o contraseña incorrectos' });
+            }
 
-         
-            res.cookie("token", token, { httpOnly: true }).json({ message: "Login exitoso", token });
+            const token = generateToken({
+                id: userFound._id,
+                email: userFound.email,
+                role: userFound.role,
+            });
+
+            res
+                .cookie("coderCookieToken", token, {
+                    maxAge: 60 * 60 * 1000,
+                    httpOnly: true,
+                })
+                .send({ status: "success", message: "Login exitoso" });
         } catch (error) {
-            console.error("🚨 Error en el login:", error);
-            res.status(500).json({ error: "Error en el login", details: error.message });
+            console.log(error);
+            res.status(500).send({ status: "error", error: error.message });
         }
     };
 
     logout = (req, res) => {
-        res.clearCookie("token").json({ message: "Logout exitoso" });
+        res.clearCookie("coderCookieToken").json({ message: "Logout exitoso" });
     };
 
-    current = (req, res) => {
-        const { _id, first_name, last_name, email, age, role } = req.user;
-        res.json({ user: { _id, first_name, last_name, email, age, role } });
+    current = async (req, res) => {
+        try {
+            const userDto = new UserDTO(req.user);
+            res.status(200).json({ status: "success", user: userDto });
+        } catch (error) {
+            res.status(500).json({ status: "error", error: error.message });
+        }
     };
 }
 

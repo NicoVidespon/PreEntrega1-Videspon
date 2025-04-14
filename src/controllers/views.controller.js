@@ -1,84 +1,76 @@
-// src/controllers/views.controller.js
-import ProductManager from "../managers/ProductManager.js";
-import CartManager from "../managers/CartManager.js";
+import { cartsService, productsService } from "../services/index.js";
 
 export default class ViewsController {
   constructor() {
-    // Instanciar los managers para usarlos en los métodos
-    this.productManager = new ProductManager();
-    this.cartManager = new CartManager();
+    this.productsService = productsService;
+    this.cartsService    = cartsService;
   }
 
-  // Renderiza la vista home con productos paginados y cartId de la sesión
   home = async (req, res) => {
     try {
-
-      const page = parseInt(req.query.page) || 1;
+      const page  = parseInt(req.query.page)  || 1;
       const limit = parseInt(req.query.limit) || 10;
-     
-      const productsData = await this.productManager.getPaginatedProducts(page, limit);
-      console.log("Productos obtenidos:", productsData);
+
+      const {
+        products,
+        currentPage,
+        totalPages,
+        prevPage,
+        nextPage
+      } = await this.productsService.getPaginatedProducts(page, limit);
 
       let cartId = req.session.cartId;
       if (!cartId) {
-        const newCart = await this.cartManager.createCart();
-        cartId = newCart._id;
+        const newCart = await this.cartsService.createCart();
+        cartId = newCart._id.toString();
         req.session.cartId = cartId;
       }
 
       res.render("home", {
-        products: productsData.products,
-        currentPage: productsData.currentPage,
-        totalPages: productsData.totalPages,
-        prevPage: productsData.prevPage,
-        nextPage: productsData.nextPage,
-        cartId,
+        products,
+        currentPage,
+        totalPages,
+        prevPage,
+        nextPage,
+        cartId
       });
     } catch (error) {
-      console.error("Error al cargar la página home:", error);
+      console.error("Error al cargar la página home:", error.message);
       res.status(500).send("Error al cargar la página.");
     }
   };
 
-  // Renderiza la vista de login
-  login = (req, res) => {
-    res.render("login", {});
-  };
+  login    = (_, res) => res.render("login");
+  register = (_, res) => res.render("register");
 
-  // Renderiza la vista de registro
-  register = (req, res) => {
-    res.render("register", {});
-  };
-
-  // Renderiza la vista del carrito
   cart = async (req, res) => {
     try {
       const cartId = req.params.id;
-      const cart = await this.cartManager.getCartById(cartId);
+      const cart   = await this.cartsService.getCartById(cartId);
+      if (!cart) return res.status(404).send("Carrito no encontrado");
       res.render("cart", { cart });
     } catch (error) {
-      console.error("Error al cargar el carrito:", error);
-      res.status(500).send("Error al cargar el carrito: " + error.message);
+      console.error("Error al cargar el carrito:", error.message);
+      res.status(500).send("Error al cargar el carrito.");
     }
   };
 
-  // Renderiza la vista de detalle del producto
   detailProduct = async (req, res) => {
     try {
       const { pid } = req.params;
-      const product = await this.productManager.getProductById(pid);
+      const product = await this.productsService.getProductById(pid);
       if (!product) return res.status(404).send("Producto no encontrado");
 
       let cartId = req.session.cartId;
       if (!cartId) {
-        const newCart = await this.cartManager.createCart();
-        cartId = newCart._id;
+        const newCart = await this.cartsService.createCart();
+        cartId = newCart._id.toString();
         req.session.cartId = cartId;
       }
 
       res.render("productDetail", { product, cartId });
     } catch (error) {
-      console.error("Error al cargar la página del producto:", error);
+      console.error("Error al cargar el producto:", error.message);
       res.status(500).send("Error al cargar el producto.");
     }
   };

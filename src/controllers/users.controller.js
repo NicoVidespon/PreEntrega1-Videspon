@@ -1,36 +1,51 @@
-import UsersDao from "../daos/MONGO/users.dao.js";
+import { usersService } from "../services/index.js";
+import { createHash } from "../utils/bcrypt.js";
 
 class UserController {
   constructor() {
-    this.usersService = new UsersDao();
+    this.service = usersService;
   }
 
-  // Crear un usuario
   createUser = async (req, res) => {
     try {
-      const newUser = req.body;
-      const user = await this.usersService.create(newUser);
-      res.status(201).json(user);
+      const { first_name, last_name, email, password } = req.body;
+
+      if (!email?.trim() || !password?.trim()) {
+        return res.status(400).send({ status: 'error', error: 'Faltan campos obligatorios' });
+      }
+
+      const userFound = await this.service.getUser({ email });
+      if (userFound) {
+        return res.status(401).send({ status: 'error', error: 'El usuario ya existe' });
+      }
+
+      const newUser = {
+        first_name,
+        last_name,
+        email,
+        password: createHash(password),
+      };
+
+      const user = await this.service.createUser(newUser);
+      res.status(201).json({ status: 'success', payload: user });
     } catch (error) {
       res.status(500).json({ error: "Error al crear el usuario", details: error.message });
     }
   };
 
-  // Obtener todos los usuarios
   getUsers = async (req, res) => {
     try {
-      const users = await this.usersService.get();
+      const users = await this.service.getUsers();
       res.json(users);
     } catch (error) {
       res.status(500).json({ error: "Error al obtener los usuarios", details: error.message });
     }
   };
 
-  // Obtener un usuario por ID
   getUser = async (req, res) => {
     try {
       const { uid } = req.params;
-      const user = await this.usersService.getBy({ _id: uid });
+      const user = await this.service.getUserById(uid); 
       if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
       res.json(user);
     } catch (error) {
@@ -38,12 +53,11 @@ class UserController {
     }
   };
 
-  // Actualizar un usuario
   updateUser = async (req, res) => {
     try {
       const { uid } = req.params;
       const userToUpdate = req.body;
-      const updatedUser = await this.usersService.update(uid, userToUpdate);
+      const updatedUser = await this.service.updateUser(uid, userToUpdate); 
       if (!updatedUser) return res.status(404).json({ error: "Usuario no encontrado" });
       res.json(updatedUser);
     } catch (error) {
@@ -51,11 +65,10 @@ class UserController {
     }
   };
 
-  // Eliminar un usuario
   deleteUser = async (req, res) => {
     try {
       const { uid } = req.params;
-      const deletedUser = await this.usersService.delete(uid);
+      const deletedUser = await this.service.deleteUser(uid); 
       if (!deletedUser) return res.status(404).json({ error: "Usuario no encontrado" });
       res.json({ message: "Usuario eliminado correctamente" });
     } catch (error) {

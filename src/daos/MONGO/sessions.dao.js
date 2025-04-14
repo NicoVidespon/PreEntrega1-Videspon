@@ -1,10 +1,22 @@
-import  userModel  from "./models/UserModel.js"
+import UserModel from "./models/UserModel.js";
+import CartModel from "./models/CartModel.js";
 
-export default class SessionsDaoMongo {
-    constructor(){
-        this.userModel = userModel
-    }
+class SessionsDaoMongo {
+    
+    getUser = async (email) => {
+        return await UserModel.findOne({ email });
+    };
 
-    getUser =    async email => await this.userModel.findOne({ email })
-    createUser = async newUser => await this.userModel.create(newUser)
+    createUser = async (userData) => {
+        const newCart = await CartModel.create({ products: [] });
+
+        const newUser = {
+            ...userData,
+            cart: newCart._id
+        };
+
+        return await UserModel.create(newUser);
+    };
 }
+
+export default SessionsDaoMongo;

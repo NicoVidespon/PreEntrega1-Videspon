@@ -1,18 +1,44 @@
-import productModel from "./models/ProductModel.js";
+import ProductModel from "./models/ProductModel.js";
 
-export default class ProductDaoMongo {
-  constructor() {
-    this.model = productModel;
-  }
+export default class ProductsDaoMongo {
+  
+  create = async (product) => {
+    try {
+      return await ProductModel.create(product);
+    } catch (error) {
+      throw new Error("Error al crear el producto: " + error.message);
+    }
+  };
 
-  get = async () => await this.model.find();
+  get = async () => {
+    try {
+      return await ProductModel.find();
+    } catch (error) {
+      throw new Error("Error al obtener los productos: " + error.message);
+    }
+  };
 
-  create = async (newProduct) => await this.model.create(newProduct);
+  getBy = async (filter) => {
+    try {
+      return await ProductModel.findOne(filter);
+    } catch (error) {
+      throw new Error("Error al obtener el producto: " + error.message);
+    }
+  };
 
-  getBy = async (filterObject) => await this.model.findOne(filterObject);
+  update = async (id, update) => {
+    try {
+      return await ProductModel.findByIdAndUpdate(id, update, { new: true });
+    } catch (error) {
+      throw new Error("Error al actualizar el producto: " + error.message);
+    }
+  };
 
-  update = async (pid, productToUpdate) => 
-    await this.model.findByIdAndUpdate(pid, productToUpdate, { new: true });
-
-  delete = async (pid) => await this.model.findByIdAndDelete(pid);
+  delete = async (id) => {
+    try {
+      return await ProductModel.findByIdAndDelete(id);
+    } catch (error) {
+      throw new Error("Error al eliminar el producto: " + error.message);
+    }
+  };
 }

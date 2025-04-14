@@ -1,27 +1,32 @@
-import { productService } from "./index.js";
-
 export default class ProductRepository {
   constructor(dao) {
     this.dao = dao;
   }
 
-  async createProduct(newProduct) {
-    return await this.dao.create(newProduct);
-  }
+  createProduct = async (newProduct) =>
+    this.dao.create(newProduct);
 
-  async getProducts() {
-    return await this.dao.get();
-  }
+  getProducts = async () =>
+    this.dao.get();
 
-  async getProduct(filter) {
-    return await this.dao.getBy(filter);
-  }
+  getProductById = async (pid) =>
+    this.dao.getBy({ _id: pid });
 
-  async updateProduct(pid, productToUpdate) {
-    return await this.dao.update(pid, productToUpdate);
-  }
+  updateProduct = async (pid, productToUpdate) =>
+    this.dao.update(pid, productToUpdate);
 
-  async deleteProduct(pid) {
-    return await this.dao.delete(pid);
-  }
+  deleteProduct = async (pid) =>
+    this.dao.delete(pid);
+
+  getPaginatedProducts = async (page = 1, limit = 10) => {
+    const all = await this.dao.get();
+    const total = all.length;
+    const totalPages = Math.ceil(total / limit);
+    const currentPage = page;
+    const prevPage = page > 1 ? page - 1 : null;
+    const nextPage = page < totalPages ? page + 1 : null;
+    const start = (page - 1) * limit;
+    const products = all.slice(start, start + limit);
+    return { products, currentPage, totalPages, prevPage, nextPage };
+  };
 }

@@ -1,15 +1,14 @@
-import { Router } from 'express'
-import UserController from "../controllers/users.controller.js"; 
+import { RouterClass } from './router.js'
+import UserController from '../controllers/users.controller.js'
 
+export class UserRouter extends RouterClass {
+    init() {
+        const userController = new UserController()
 
-const router = Router()
-const {createUser,getUsers,getUser,updateUser,deleteUser} = new UserController()
-
-router.post('/', createUser)
-router.get('/', getUsers)
-router.get('/:uid', getUser)
-router.put('/:uid', updateUser)
-router.delete('/:uid', deleteUser)
-
-
-export default router
+        this.get('/', ['ADMIN'], userController.getUsers)
+        this.get('/:uid', ['ADMIN'], userController.getUser)
+        this.post('/', ['PUBLIC'], userController.createUser)
+        this.put('/:uid', ['ADMIN'], userController.updateUser)
+        this.delete('/:uid', ['ADMIN'], userController.deleteUser)
+    }
+}
